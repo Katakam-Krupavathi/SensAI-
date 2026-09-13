@@ -9,8 +9,8 @@ import { dark } from "@clerk/themes";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "AI Career Coach",
-  description: "",
+  title: "SensAI - AI Career Coach",
+  description: "AI-Powered Career Coach & Professional Development Platform by Katakam Krupavathi",
 };
 
 export default function RootLayout({ children }) {
