@@ -3,6 +3,7 @@
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { checkRateLimit } from "@/lib/rate-limiter";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -10,6 +11,8 @@ const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 export async function generateCoverLetter(data) {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
+
+  await checkRateLimit(userId, "cover letter generation");
 
   const user = await db.user.findUnique({
     where: { clerkUserId: userId },
