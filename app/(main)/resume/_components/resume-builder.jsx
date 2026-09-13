@@ -24,8 +24,14 @@ import { useUser } from "@clerk/nextjs";
 import { entriesToMarkdown } from "@/app/lib/helper";
 import { resumeSchema } from "@/app/lib/schema";
 import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
+import AtsChecker from "./ats-checker";
+import { Target } from "lucide-react";
 
-export default function ResumeBuilder({ initialContent }) {
+export default function ResumeBuilder({
+  initialContent,
+  initialAtsScore,
+  initialFeedback,
+}) {
   const [activeTab, setActiveTab] = useState("edit");
   const [previewContent, setPreviewContent] = useState(initialContent);
   const { user } = useUser();
@@ -190,6 +196,15 @@ export default function ResumeBuilder({ initialContent }) {
         <TabsList>
           <TabsTrigger value="edit">Form</TabsTrigger>
           <TabsTrigger value="preview">Markdown</TabsTrigger>
+          <TabsTrigger value="ats" className="flex items-center gap-1.5">
+            <Target className="h-3.5 w-3.5 text-primary" />
+            ATS Optimizer
+            {initialAtsScore !== null && initialAtsScore !== undefined && (
+              <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-semibold">
+                {Math.round(initialAtsScore)}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="edit">
@@ -412,6 +427,14 @@ export default function ResumeBuilder({ initialContent }) {
               />
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="ats">
+          <AtsChecker
+            resumeContent={previewContent || getCombinedContent()}
+            initialAtsScore={initialAtsScore}
+            initialFeedback={initialFeedback}
+          />
         </TabsContent>
       </Tabs>
     </div>
