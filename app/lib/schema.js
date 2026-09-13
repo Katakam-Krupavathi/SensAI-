@@ -113,3 +113,16 @@ export const improvementTipSchema = z
   .string()
   .min(1, "Improvement tip cannot be empty");
 
+export const atsScoreResponseSchema = z.object({
+  atsScore: z.number().min(0).max(100),
+  summary: z.string().min(1, "Summary is required"),
+  matchedKeywords: z.array(z.string()).default([]),
+  missingKeywords: z.array(z.string()).default([]),
+  strengths: z.array(z.string()).default([]),
+  improvements: z
+    .array(z.string())
+    .min(1, "At least one improvement suggestion is required"),
+  formattingFeedback: z.array(z.string()).default([]),
+});
+
+
