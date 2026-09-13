@@ -288,8 +288,8 @@ INNGEST_SIGNING_KEY="your_inngest_signing_key"
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/Katakam-Krupavathi/SensAI.git
-   cd SensAI
+   git clone https://github.com/Katakam-Krupavathi/SensAI-.git
+   cd SensAI-
    ```
 
 2. **Install dependencies**:
