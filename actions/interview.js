@@ -3,6 +3,8 @@
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { parseJsonResponse } from "@/lib/ai/parseJsonResponse";
+import { quizResponseSchema, quizQuestionsArraySchema } from "@/app/lib/schema";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -45,15 +47,18 @@ export async function generateQuiz() {
 
   try {
     const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
-    const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
-    const quiz = JSON.parse(cleanedText);
+    const text = result?.response?.text?.() || "";
 
-    return quiz.questions;
+    const parsed = await parseJsonResponse(
+      text,
+      quizResponseSchema.or(quizQuestionsArraySchema),
+      async (retryPrompt) => await model.generateContent(retryPrompt)
+    );
+
+    return Array.isArray(parsed) ? parsed : parsed.questions;
   } catch (error) {
     console.error("Error generating quiz:", error);
-    throw new Error("Failed to generate quiz questions");
+    throw new Error(`Failed to generate quiz questions: ${error.message}`);
   }
 }
 
