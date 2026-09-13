@@ -3,6 +3,8 @@
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { parseJsonResponse } from "@/lib/ai/parseJsonResponse";
+import { industryInsightSchema } from "@/app/lib/schema";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -28,12 +30,21 @@ export const generateAIInsights = async (industry) => {
           Include at least 5 skills and trends.
         `;
 
-  const result = await model.generateContent(prompt);
-  const response = result.response;
-  const text = response.text();
-  const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
+  try {
+    const result = await model.generateContent(prompt);
+    const text = result?.response?.text?.() || "";
 
-  return JSON.parse(cleanedText);
+    return await parseJsonResponse(
+      text,
+      industryInsightSchema,
+      async (retryPrompt) => await model.generateContent(retryPrompt)
+    );
+  } catch (error) {
+    console.error("Error generating industry insights with AI:", error.message);
+    throw new Error(
+      `Failed to generate AI industry insights for "${industry}": ${error.message}`
+    );
+  }
 };
 
 export async function getIndustryInsights() {
