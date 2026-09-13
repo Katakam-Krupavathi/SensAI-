@@ -6,10 +6,6 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?style=flat&logo=postgresql)](https://neon.tech/)
 [![Clerk](https://img.shields.io/badge/Clerk-Auth-6C47FF?style=flat&logo=clerk)](https://clerk.com/)
 [![Vitest](https://img.shields.io/badge/Tested%20with-Vitest-yellow?style=flat&logo=vitest)](https://vitest.dev/)
-[![Author](https://img.shields.io/badge/Author-Katakam--Krupavathi-orange?style=flat&logo=github)](https://github.com/Katakam-Krupavathi)
-
-> **Architected & Developed by Katakam Krupavathi**  
-> GitHub: [@Katakam-Krupavathi](https://github.com/Katakam-Krupavathi) &bull; Email: [krupavathikatakam2006@gmail.com](mailto:krupavathikatakam2006@gmail.com)
 
 SensAI is an intelligent, full-stack AI career acceleration platform built with Next.js 15, Google Gemini AI, Prisma ORM, PostgreSQL, Clerk Authentication, and Inngest. It empowers job seekers and professionals with personalized career coaching, dynamic industry insights, AI resume building with ATS scoring, tailored cover letter generation, and interactive mock interview preparation.
 
@@ -302,8 +298,8 @@ sequenceDiagram
 
 ## 📋 Project Roadmap & Completed Milestones
 
-- [x] **Phase 1: Architecture & Authorship Setup**
-  - [x] Standardize commit history and attribution under Katakam Krupavathi.
+- [x] **Phase 1: Architecture & Project Setup**
+  - [x] Standardize repository architecture and codebase optimization.
   - [x] Create comprehensive architecture and workflow documentation with Mermaid diagrams.
 - [x] **Phase 2: Core User Flow & Onboarding Fixes**
   - [x] Resolve transaction object return bug in `actions/user.js`.
