@@ -5,6 +5,7 @@
 [![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?style=flat&logo=prisma)](https://prisma.io/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?style=flat&logo=postgresql)](https://neon.tech/)
 [![Clerk](https://img.shields.io/badge/Clerk-Auth-6C47FF?style=flat&logo=clerk)](https://clerk.com/)
+[![Vitest](https://img.shields.io/badge/Tested%20with-Vitest-yellow?style=flat&logo=vitest)](https://vitest.dev/)
 [![Author](https://img.shields.io/badge/Author-Katakam--Krupavathi-orange?style=flat&logo=github)](https://github.com/Katakam-Krupavathi)
 
 > **Architected & Developed by Katakam Krupavathi**  
@@ -313,12 +314,17 @@ INNGEST_SIGNING_KEY="your_inngest_signing_key"
    npx prisma db push
    ```
 
-4. **Run the Development Server**:
+4. **Run Automated Test Suite**:
+   ```bash
+   npm test
+   ```
+
+5. **Run the Development Server**:
    ```bash
    npm run dev
    ```
 
-5. **Start Inngest Dev Server (Optional for local cron jobs)**:
+6. **Start Inngest Dev Server (Optional for local cron jobs)**:
    ```bash
    npx inngest-cli@latest dev
    ```
