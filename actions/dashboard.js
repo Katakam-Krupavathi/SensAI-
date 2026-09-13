@@ -53,15 +53,30 @@ export async function getIndustryInsights() {
   if (!user.industryInsight) {
     const insights = await generateAIInsights(user.industry);
 
-    const industryInsight = await db.industryInsight.create({
-      data: {
-        industry: user.industry,
-        ...insights,
-        nextUpdate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      },
-    });
+    try {
+      const industryInsight = await db.industryInsight.upsert({
+        where: {
+          industry: user.industry,
+        },
+        create: {
+          industry: user.industry,
+          ...insights,
+          nextUpdate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+        update: {},
+      });
 
-    return industryInsight;
+      return industryInsight;
+    } catch (error) {
+      if (error.code === "P2002") {
+        return await db.industryInsight.findUnique({
+          where: {
+            industry: user.industry,
+          },
+        });
+      }
+      throw error;
+    }
   }
 
   return user.industryInsight;
