@@ -483,11 +483,4 @@ INNGEST_SIGNING_KEY="your_inngest_signing_key"
 
 Open [http://localhost:3000](http://localhost:3000) in your browser to explore the platform.
 
----
-
-## 👤 Author & Maintainer
-
-**Katakam Krupavathi**  
-- GitHub: [@Katakam-Krupavathi](https://github.com/Katakam-Krupavathi)  
-- Email: [krupavathikatakam2006@gmail.com](mailto:krupavathikatakam2006@gmail.com)
 
