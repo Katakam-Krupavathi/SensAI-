@@ -1,5 +1,12 @@
 # SensAI — AI-Powered Career Coach
 
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat&logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-blue?style=flat&logo=react)](https://react.dev/)
+[![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?style=flat&logo=prisma)](https://prisma.io/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?style=flat&logo=postgresql)](https://neon.tech/)
+[![Clerk](https://img.shields.io/badge/Clerk-Auth-6C47FF?style=flat&logo=clerk)](https://clerk.com/)
+[![Author](https://img.shields.io/badge/Author-Katakam--Krupavathi-orange?style=flat&logo=github)](https://github.com/Katakam-Krupavathi)
+
 > **Architected & Developed by Katakam Krupavathi**  
 > GitHub: [@Katakam-Krupavathi](https://github.com/Katakam-Krupavathi) &bull; Email: [krupavathikatakam2006@gmail.com](mailto:krupavathikatakam2006@gmail.com)
 
