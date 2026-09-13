@@ -5,6 +5,7 @@ import { auth } from "@clerk/nextjs/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { parseJsonResponse } from "@/lib/ai/parseJsonResponse";
 import { industryInsightSchema } from "@/app/lib/schema";
+import { checkRateLimit } from "@/lib/rate-limiter";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -62,6 +63,7 @@ export async function getIndustryInsights() {
 
   // If no insights exist, generate them
   if (!user.industryInsight) {
+    await checkRateLimit(userId, "industry insights generation");
     const insights = await generateAIInsights(user.industry);
 
     try {
