@@ -89,10 +89,16 @@ export async function improveWithAI({ current, type }) {
   try {
     const result = await model.generateContent(prompt);
     const response = result.response;
-    const improvedContent = response.text().trim();
+    const text = response.text();
+    const improvedContent = text ? text.replace(/^```(?:markdown)?\n?|```$/g, "").trim() : "";
+    
+    if (!improvedContent) {
+      throw new Error("AI returned an empty response");
+    }
+
     return improvedContent;
   } catch (error) {
-    console.error("Error improving content:", error);
-    throw new Error("Failed to improve content");
+    console.error("Error improving resume content with AI:", error.message);
+    throw new Error(`Failed to improve ${type} content: ${error.message}`);
   }
 }
