@@ -271,6 +271,10 @@ NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL="/onboarding"
 # Google Gemini AI
 GEMINI_API_KEY="your_gemini_api_key_here"
 
+# AI Rate Limiting (Configurable Sliding Window)
+AI_RATE_LIMIT_MAX_REQUESTS=10    # Max allowed generations per window (default: 10)
+AI_RATE_LIMIT_WINDOW_MINUTES=60  # Sliding window duration in minutes (default: 60)
+
 # Inngest (Background Workflow Engine)
 INNGEST_EVENT_KEY="your_inngest_event_key"
 INNGEST_SIGNING_KEY="your_inngest_signing_key"
