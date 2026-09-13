@@ -70,3 +70,46 @@ export const coverLetterSchema = z.object({
   jobTitle: z.string().min(1, "Job title is required"),
   jobDescription: z.string().min(1, "Job description is required"),
 });
+
+// AI Response Schemas
+export const salaryRangeSchema = z.object({
+  role: z.string().min(1, "Role is required"),
+  min: z.number().nonnegative("Minimum salary must be non-negative"),
+  max: z.number().nonnegative("Maximum salary must be non-negative"),
+  median: z.number().nonnegative("Median salary must be non-negative"),
+  location: z.string().optional().nullable(),
+});
+
+export const industryInsightSchema = z.object({
+  salaryRanges: z
+    .array(salaryRangeSchema)
+    .min(1, "At least one salary range is required"),
+  growthRate: z.number(),
+  demandLevel: z.enum(["High", "Medium", "Low"]).or(z.string()),
+  topSkills: z.array(z.string()).min(1, "Top skills are required"),
+  marketOutlook: z.enum(["Positive", "Neutral", "Negative"]).or(z.string()),
+  keyTrends: z.array(z.string()).min(1, "Key trends are required"),
+  recommendedSkills: z.array(z.string()).min(1, "Recommended skills are required"),
+});
+
+export const quizQuestionSchema = z.object({
+  question: z.string().min(1, "Question cannot be empty"),
+  options: z.array(z.string()).min(2, "Options array must contain choices"),
+  correctAnswer: z.string().min(1, "Correct answer is required"),
+  explanation: z.string().min(1, "Explanation is required"),
+});
+
+export const quizResponseSchema = z.object({
+  questions: z
+    .array(quizQuestionSchema)
+    .min(1, "At least one question is required"),
+});
+
+export const quizQuestionsArraySchema = z
+  .array(quizQuestionSchema)
+  .min(1, "At least one question is required");
+
+export const improvementTipSchema = z
+  .string()
+  .min(1, "Improvement tip cannot be empty");
+
