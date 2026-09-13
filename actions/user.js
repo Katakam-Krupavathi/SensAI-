@@ -16,30 +16,53 @@ export async function updateUser(data) {
   if (!user) throw new Error("User not found");
 
   try {
-    // Start a transaction to handle both operations
+    // 1. Check if industry exists outside transaction (plain read)
+    let industryInsight = await db.industryInsight.findUnique({
+      where: {
+        industry: data.industry,
+      },
+    });
+
+    // 2. If industry doesn't exist, call Gemini LLM OUTSIDE any transaction
+    let insights = null;
+    if (!industryInsight) {
+      insights = await generateAIInsights(data.industry);
+    }
+
+    // 3. Short transaction doing only DB writes using tx client exclusively
     const result = await db.$transaction(
       async (tx) => {
-        // First check if industry exists
-        let industryInsight = await tx.industryInsight.findUnique({
-          where: {
-            industry: data.industry,
-          },
-        });
+        let currentInsight = industryInsight;
 
-        // If industry doesn't exist, create it with default values
-        if (!industryInsight) {
-          const insights = await generateAIInsights(data.industry);
-
-          industryInsight = await db.industryInsight.create({
-            data: {
-              industry: data.industry,
-              ...insights,
-              nextUpdate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            },
-          });
+        // Upsert industry insight if not already present
+        if (!currentInsight && insights) {
+          try {
+            currentInsight = await tx.industryInsight.upsert({
+              where: {
+                industry: data.industry,
+              },
+              create: {
+                industry: data.industry,
+                ...insights,
+                nextUpdate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+              },
+              update: {},
+            });
+          } catch (upsertError) {
+            // Fallback in case of race condition / unique constraint collision (P2002)
+            if (upsertError.code === "P2002") {
+              currentInsight = await tx.industryInsight.findUnique({
+                where: {
+                  industry: data.industry,
+                },
+              });
+            } else {
+              throw upsertError;
+            }
+          }
         }
 
-        // Now update the user
+        // Update the user record using tx client
         const updatedUser = await tx.user.update({
           where: {
             id: user.id,
@@ -52,10 +75,10 @@ export async function updateUser(data) {
           },
         });
 
-        return { updatedUser, industryInsight };
+        return { updatedUser, industryInsight: currentInsight };
       },
       {
-        timeout: 10000, // default: 5000
+        timeout: 10000,
       }
     );
 
