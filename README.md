@@ -182,6 +182,7 @@ sequenceDiagram
 ## 🚀 Key Features
 
 - 🎯 **AI-Powered Industry Insights**: Real-time salary distributions, growth rates, market outlook, and high-demand skill heatmaps updated automatically.
+- 🛡️ **Resilient AI Pipeline**: Robust JSON extraction with balanced bracket parsing, strict Zod schema validation, and automatic single-retry fallback on malformed model outputs.
 - 📝 **Smart Resume Builder & ATS Analyzer**: Markdown-supported resume composer with automated ATS compatibility scoring, role-fit suggestions, and PDF generation.
 - ✉️ **Tailored Cover Letter Generator**: Generate highly personalized cover letters aligned with target job descriptions and company backgrounds.
 - 🎓 **Interactive Mock Interviews**: Dynamic technical & behavioral quiz engine with instant evaluation, score distributions, and AI improvement tips.
@@ -236,6 +237,8 @@ SensAI/
 ├── data/                     # Static configuration & landing page datasets
 ├── hooks/                    # Custom React hooks (e.g. use-fetch)
 ├── lib/                      # Core utilities & singleton clients
+│   ├── ai/                   # AI response extraction & retry engine
+│   │   └── parseJsonResponse.js
 │   ├── inngest/              # Inngest client & scheduled functions
 │   ├── checkUser.js          # Authenticated user sync helper
 │   ├── prisma.js             # Prisma ORM singleton client
