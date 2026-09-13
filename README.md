@@ -108,26 +108,27 @@ sequenceDiagram
     Server-->>App: Render Dashboard / Onboarding
 ```
 
-### 2. AI Resume Builder & ATS Scoring
+### 2. AI Resume Builder & Real-time ATS Scoring Engine
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User
-    participant App as Resume Builder View
-    participant Action as actions/resume.js
+    participant App as Resume Builder & ATS Tab
+    participant ATSAction as actions/ats-score.js
     participant Gemini as Google Gemini AI
     participant DB as PostgreSQL (Prisma)
 
-    User->>App: Input Experience, Skills, Bio, & Projects
-    App->>Action: saveResume(content)
-    Action->>Action: Verify Clerk userId
-    Action->>Gemini: Prompt for ATS Optimization & Feedback
-    Gemini-->>Action: Return ATS Score, Strengths, & Recommendations
-    Action->>DB: Upsert Resume record (content, atsScore, feedback)
-    DB-->>Action: Saved Resume Entity
-    Action-->>App: Updated Resume & ATS Analytics
-    App-->>User: Display Formatted Markdown & PDF Export Option
+    User->>App: Input Target Job Description (or General Audit)
+    App->>ATSAction: scoreResumeAgainstJob(resumeContent, jobDescription)
+    ATSAction->>ATSAction: Verify Clerk Auth & Check User Rate Limit
+    ATSAction->>Gemini: Extract Job Keywords & Match vs. Resume Content
+    Gemini-->>ATSAction: Return Match Score (0-100), Keywords & Feedback Bullets
+    ATSAction->>ATSAction: Validate with atsScoreResponseSchema
+    ATSAction->>DB: Upsert Resume record (atsScore, feedback)
+    DB-->>ATSAction: Persisted Resume Entity
+    ATSAction-->>App: Return Structured ATS Analysis
+    App-->>User: Render Score Gauge, Matched vs. Missing Badges, & Actionable Gaps
 ```
 
 ### 3. Interactive AI Mock Interview
@@ -212,6 +213,7 @@ sequenceDiagram
 ```text
 SensAI/
 ├── actions/                  # Next.js Server Actions (Authenticated)
+│   ├── ats-score.js          # Real-time ATS scoring & job keyword matcher
 │   ├── cover-letter.js       # Cover letter generation & management
 │   ├── dashboard.js          # Industry insights data fetchers
 │   ├── interview.js          # Interview generation & quiz evaluation
@@ -224,7 +226,7 @@ SensAI/
 │   │   ├── dashboard/        # Industry trends & market analytics
 │   │   ├── interview/        # Mock interview simulator & history
 │   │   ├── onboarding/       # Industry & profile setup form
-│   │   └── resume/           # Resume editor & ATS evaluator
+│   │   └── resume/           # Resume editor, PDF exporter & ATS optimizer
 │   ├── api/inngest/          # Inngest webhook route handler
 │   ├── globals.css           # Global Tailwind CSS styles
 │   ├── layout.js             # Root layout with Clerk & Theme Provider
@@ -242,6 +244,7 @@ SensAI/
 │   ├── inngest/              # Inngest client & scheduled functions
 │   ├── checkUser.js          # Authenticated user sync helper
 │   ├── prisma.js             # Prisma ORM singleton client
+│   ├── rate-limiter.js       # Configurable sliding-window rate limiter
 │   └── utils.js              # Class merger utilities
 ├── prisma/                   # Prisma schema & migration files
 │   └── schema.prisma         # PostgreSQL data models
