@@ -18,15 +18,17 @@ SensAI is an intelligent, full-stack AI career acceleration platform built with 
 ## 📑 Table of Contents
 
 - [System Architecture](#-system-architecture)
+- [Database Schema (Entity Relationship Diagram)](#-database-schema-entity-relationship-diagram)
 - [Sequence Diagrams & Workflows](#-sequence-diagrams--workflows)
   - [1. User Authentication & Onboarding](#1-user-authentication--onboarding)
-  - [2. AI Resume Builder & ATS Scoring](#2-ai-resume-builder--ats-scoring)
+  - [2. AI Resume Builder & Real-time ATS Scoring Engine](#2-ai-resume-builder--real-time-ats-scoring-engine)
   - [3. Interactive AI Mock Interview](#3-interactive-ai-mock-interview)
   - [4. Automated Background Industry Insights](#4-automated-background-industry-insights)
 - [Key Features](#-key-features)
+- [Project Roadmap & Completed Milestones](#-project-roadmap--completed-milestones)
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
-- [Environment Configuration](#-environment-configuration)
+- [Environment Configuration & Rate Limiting](#-environment-configuration--rate-limiting)
 - [Getting Started](#-getting-started)
 - [Author & Maintainer](#-author--maintainer)
 
@@ -39,9 +41,10 @@ graph TD
     subgraph Client ["Client Layer (Next.js 15 App Router)"]
         UI[Interactive UI Components / Radix UI / Tailwind CSS]
         Dash[Industry Insights Dashboard]
-        Resume[Resume Builder & PDF Exporter]
+        Resume[Resume Builder, PDF Exporter & ATS Optimizer]
         Cover[AI Cover Letter Generator]
         Interview[Mock Interview & Quiz Arena]
+        Apps[Job Application Tracker & Pipeline]
     end
 
     subgraph Auth ["Authentication & Identity"]
@@ -49,12 +52,13 @@ graph TD
     end
 
     subgraph Server ["Server & Action Layer"]
-        SA[Server Actions with Strict Auth Verification]
-        Helper[Schema Validation & Error Handlers]
+        SA[Server Actions with Strict Auth & Rate Limiting]
+        Helper[Zod Schema Validation & Retry Handlers]
     end
 
     subgraph AI ["AI Processing Layer"]
         Gemini[Google Gemini 1.5 Flash Model]
+        Parser[Robust JSON Extractor & Validator]
     end
 
     subgraph Background ["Background Workflows & Cron"]
@@ -71,13 +75,103 @@ graph TD
     Resume --> SA
     Cover --> SA
     Interview --> SA
+    Apps --> SA
 
     SA --> Clerk
     SA --> Gemini
+    Gemini --> Parser
+    Parser --> SA
     SA --> Prisma
     Inngest --> Gemini
     Inngest --> Prisma
     Prisma --> Postgres
+```
+
+---
+
+## 🗄 Database Schema (Entity Relationship Diagram)
+
+```mermaid
+erDiagram
+    USER ||--o{ ASSESSMENT : "takes"
+    USER ||--o| RESUME : "creates"
+    USER ||--o{ COVER_LETTER : "generates"
+    USER ||--o{ JOB_APPLICATION : "tracks"
+    USER }o--o| INDUSTRY_INSIGHT : "belongs to"
+
+    USER {
+        string id PK
+        string clerkUserId UK
+        string email UK
+        string name
+        string imageUrl
+        string industry FK
+        string bio
+        int experience
+        string[] skills
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    RESUME {
+        string id PK
+        string userId FK, UK
+        string content
+        float atsScore
+        string feedback
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    COVER_LETTER {
+        string id PK
+        string userId FK
+        string content
+        string jobDescription
+        string companyName
+        string jobTitle
+        string status
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    ASSESSMENT {
+        string id PK
+        string userId FK
+        float quizScore
+        json[] questions
+        string category
+        string improvementTip
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    JOB_APPLICATION {
+        string id PK
+        string userId FK
+        string companyName
+        string jobTitle
+        string jobDescription
+        string status
+        float matchScore
+        datetime appliedAt
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    INDUSTRY_INSIGHT {
+        string id PK
+        string industry UK
+        json[] salaryRanges
+        float growthRate
+        string demandLevel
+        string[] topSkills
+        string marketOutlook
+        string[] keyTrends
+        string[] recommendedSkills
+        datetime lastUpdated
+        datetime nextUpdate
+    }
 ```
 
 ---
@@ -103,7 +197,7 @@ sequenceDiagram
     alt User exists in DB
         Server->>DB: Fetch user profile & industry
     else New User
-        Server->>DB: Provision User record in PostgreSQL
+        Server->>DB: Provision User record in PostgreSQL (Upsert with P2002 Guard)
     end
     DB-->>Server: Return User Profile
     Server-->>App: Render Dashboard / Onboarding
@@ -115,21 +209,28 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     actor User
-    participant App as Resume Builder & ATS Tab
+    participant App as Resume Builder & ATS Optimizer (/resume)
     participant ATSAction as actions/ats-score.js
-    participant Gemini as Google Gemini AI
+    participant Gemini as Google Gemini 1.5 Flash
+    participant Parser as lib/ai/parseJsonResponse.js
     participant DB as PostgreSQL (Prisma)
 
     User->>App: Input Target Job Description (or General Audit)
     App->>ATSAction: scoreResumeAgainstJob(resumeContent, jobDescription)
     ATSAction->>ATSAction: Verify Clerk Auth & Check User Rate Limit
-    ATSAction->>Gemini: Extract Job Keywords & Match vs. Resume Content
-    Gemini-->>ATSAction: Return Match Score (0-100), Keywords & Feedback Bullets
-    ATSAction->>ATSAction: Validate with atsScoreResponseSchema
-    ATSAction->>DB: Upsert Resume record (atsScore, feedback)
+    ATSAction->>Gemini: Prompt Keyword Extraction & ATS Audit
+    alt Model output contains prose or fences
+        Gemini-->>Parser: Raw response text
+        Parser->>Parser: Extract balanced JSON & Validate with atsScoreResponseSchema
+    else Parsing / Schema failure
+        Parser->>Gemini: Trigger single-retry correction prompt
+        Gemini-->>Parser: Corrected raw JSON
+    end
+    Parser-->>ATSAction: Validated ATS Analysis Payload
+    ATSAction->>DB: Upsert Resume row (atsScore, serialized feedback)
     DB-->>ATSAction: Persisted Resume Entity
-    ATSAction-->>App: Return Structured ATS Analysis
-    App-->>User: Render Score Gauge, Matched vs. Missing Badges, & Actionable Gaps
+    ATSAction-->>App: Return Structured Analysis
+    App-->>User: Render Colored Score Gauge, Matched vs. Missing Badges & Actionable Gaps
 ```
 
 ### 3. Interactive AI Mock Interview
@@ -138,16 +239,16 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     actor User
-    participant QuizUI as Interview Quiz Component
+    participant QuizUI as Interview Quiz Arena (/interview)
     participant Action as actions/interview.js
     participant Gemini as Google Gemini AI
     participant DB as PostgreSQL (Prisma)
 
     User->>QuizUI: Start Technical/Behavioral Interview
     QuizUI->>Action: generateQuiz()
-    Action->>Action: Verify Clerk userId & user industry/skills
+    Action->>Action: Verify Clerk userId & Check Rate Limit
     Action->>Gemini: Generate role-specific questions & answers
-    Gemini-->>Action: 10 curated questions + explanations
+    Gemini-->>Action: 10 curated questions + explanations (Zod-validated)
     Action-->>QuizUI: Render Quiz Step-by-Step
     User->>QuizUI: Submit Answers
     QuizUI->>Action: saveQuizResult(questions, score)
@@ -171,12 +272,16 @@ sequenceDiagram
     Cron->>Inngest: Trigger generateIndustryInsights function
     Inngest->>DB: Fetch all tracked industries
     DB-->>Inngest: Return distinct industries
-    loop For each industry
-        Inngest->>Gemini: Prompt industry trends, salary data, demand & top skills
-        Gemini-->>Inngest: Structured JSON payload
-        Inngest->>DB: Update IndustryInsight record (lastUpdated, nextUpdate)
+    loop For each industry (Isolated step.run)
+        Inngest->>Gemini: Prompt industry trends, salary data & top skills
+        alt Successful Generation
+            Gemini-->>Inngest: Structured JSON payload (Zod-validated)
+            Inngest->>DB: Update IndustryInsight record (lastUpdated, nextUpdate)
+        else Industry Fails / Errors
+            Inngest->>Inngest: Catch error, record in failed list, proceed to next industry
+        end
     end
-    Inngest-->>Cron: Pipeline Completed Successfully
+    Inngest-->>Cron: Execution Summary (Succeeded vs. Failed counts)
 ```
 
 ---
@@ -185,11 +290,46 @@ sequenceDiagram
 
 - 🎯 **AI-Powered Industry Insights**: Real-time salary distributions, growth rates, market outlook, and high-demand skill heatmaps updated automatically.
 - 🛡️ **Resilient AI Pipeline**: Robust JSON extraction with balanced bracket parsing, strict Zod schema validation, and automatic single-retry fallback on malformed model outputs.
-- 📝 **Smart Resume Builder & ATS Analyzer**: Markdown-supported resume composer with automated ATS compatibility scoring, role-fit suggestions, and PDF generation.
+- ⏱️ **Configurable Rate Limiting**: Built-in sliding-window rate limiter protecting Gemini API quotas with clear user-facing cooldown timers.
+- 📝 **Smart Resume Builder & ATS Analyzer**: Markdown-supported resume composer with automated ATS compatibility scoring, job keyword matching, role-fit suggestions, and PDF generation.
 - ✉️ **Tailored Cover Letter Generator**: Generate highly personalized cover letters aligned with target job descriptions and company backgrounds.
 - 🎓 **Interactive Mock Interviews**: Dynamic technical & behavioral quiz engine with instant evaluation, score distributions, and AI improvement tips.
+- 💼 **Job Applications Tracker (`/applications`)**: Centralized dashboard to track applied jobs, match scores, interview milestones, and application statuses.
 - 🔒 **Enterprise-Grade Security**: Strict Clerk user authentication with multi-factor support, authenticated server actions, and protected API routes.
-- ⚡ **Automated Background Workflows**: Inngest-powered recurring cron pipelines ensuring up-to-date market intelligence with zero manual maintenance.
+- ⚡ **Automated Background Workflows**: Inngest-powered recurring cron pipelines ensuring up-to-date market intelligence with per-industry failure isolation.
+
+---
+
+## 📋 Project Roadmap & Completed Milestones
+
+- [x] **Phase 1: Architecture & Authorship Setup**
+  - [x] Standardize commit history and attribution under Katakam Krupavathi.
+  - [x] Create comprehensive architecture and workflow documentation with Mermaid diagrams.
+- [x] **Phase 2: Core User Flow & Onboarding Fixes**
+  - [x] Resolve transaction object return bug in `actions/user.js`.
+  - [x] Align `OnboardingForm` state handling to trigger automatic redirect to `/dashboard`.
+- [x] **Phase 3: Database & Transaction Optimization**
+  - [x] Move Gemini LLM network calls outside of database transactions.
+  - [x] Eliminate `tx` vs. `db` client mixing inside transaction scopes.
+  - [x] Prevent race conditions using `upsert` and unique-constraint (`P2002`) collision guards.
+  - [x] Guard `checkUser()` against undefined email addresses.
+- [x] **Phase 4: AI Resilience & Output Validation**
+  - [x] Implement `lib/ai/parseJsonResponse.js` with balanced bracket extraction and single-retry fallback.
+  - [x] Define Zod validation schemas for industry insights, quizzes, and improvement tips.
+  - [x] Wrap all Gemini generation endpoints in try/catch with actionable user error surfacing.
+- [x] **Phase 5: Background Cron Failure Isolation**
+  - [x] Refactor Inngest `generateIndustryInsights` with isolated `step.run` per industry.
+  - [x] Prevent individual industry failure from aborting weekly scheduled runs.
+- [x] **Phase 6: Sliding-Window Rate Limiting**
+  - [x] Build configurable sliding-window rate limiter (`lib/rate-limiter.js`).
+  - [x] Apply rate limits across all AI server actions with remaining-time cooldown notifications.
+- [x] **Phase 7: Real-Time ATS Scoring Engine**
+  - [x] Create `actions/ats-score.js` for job-specific matching and general structural audits.
+  - [x] Build interactive `AtsChecker` UI with score gauge, matched/missing keyword badges, and improvement tips.
+  - [x] Persist `atsScore` and structured `feedback` to PostgreSQL `Resume` records.
+- [x] **Phase 8: Automated Test Suite & Continuous Integration**
+  - [x] Configure Vitest test runner with 100% pass rate across AI parser, rate limiter, and ATS modules.
+  - [x] Setup GitHub Actions CI workflow for Prisma schema validation and automated testing on PRs.
 
 ---
 
@@ -204,6 +344,7 @@ sequenceDiagram
 | **Database & ORM** | [PostgreSQL (Neon)](https://neon.tech/), [Prisma ORM](https://www.prisma.io/) |
 | **Authentication** | [Clerk Authentication](https://clerk.com/) |
 | **Background Jobs** | [Inngest Workflow Engine](https://www.inngest.com/) |
+| **Testing & CI** | [Vitest](https://vitest.dev/), [GitHub Actions](https://github.com/features/actions) |
 | **Charts & Visualization** | [Recharts](https://recharts.org/) |
 | **Form Handling** | [React Hook Form](https://react-hook-form.com/), [Zod](https://zod.dev/) |
 
@@ -213,7 +354,10 @@ sequenceDiagram
 
 ```text
 SensAI/
-├── actions/                  # Next.js Server Actions (Authenticated)
+├── .github/
+│   └── workflows/
+│       └── ci.yml            # GitHub Actions CI workflow (Validation & Tests)
+├── actions/                  # Next.js Server Actions (Authenticated & Rate-Limited)
 │   ├── ats-score.js          # Real-time ATS scoring & job keyword matcher
 │   ├── cover-letter.js       # Cover letter generation & management
 │   ├── dashboard.js          # Industry insights data fetchers
@@ -250,13 +394,17 @@ SensAI/
 ├── prisma/                   # Prisma schema & migration files
 │   └── schema.prisma         # PostgreSQL data models
 ├── public/                   # Static assets & illustrations
+├── tests/                    # Automated Vitest test suites
+│   ├── ai-parser.test.js     # JSON extraction & schema validation tests
+│   ├── ats-scoring.test.js   # ATS match & scoring tests
+│   └── rate-limiter.test.js  # Sliding-window rate limit tests
 ├── package.json              # Project dependencies & scripts
 └── README.md                 # Architecture documentation
 ```
 
 ---
 
-## ⚙️ Environment Configuration
+## ⚙️ Environment Configuration & Rate Limiting
 
 Create a `.env` file in the root directory and configure the following variables:
 
@@ -283,6 +431,10 @@ AI_RATE_LIMIT_WINDOW_MINUTES=60  # Sliding window duration in minutes (default: 
 INNGEST_EVENT_KEY="your_inngest_event_key"
 INNGEST_SIGNING_KEY="your_inngest_signing_key"
 ```
+
+### Adjusting Rate Limits
+- To increase quota for power users or production scaling, update `AI_RATE_LIMIT_MAX_REQUESTS` (e.g. `25`).
+- To adjust the cooldown duration, modify `AI_RATE_LIMIT_WINDOW_MINUTES` (e.g. `30`).
 
 ---
 
@@ -338,3 +490,4 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to explore t
 **Katakam Krupavathi**  
 - GitHub: [@Katakam-Krupavathi](https://github.com/Katakam-Krupavathi)  
 - Email: [krupavathikatakam2006@gmail.com](mailto:krupavathikatakam2006@gmail.com)
+
